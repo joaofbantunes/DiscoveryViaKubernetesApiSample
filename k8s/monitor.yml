@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole # using cluster role, so the monitor can access all namespaces
+metadata:
+  name: monitor-role
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - "*"
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitor-service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitor-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: monitor-role
+subjects:
+  - kind: ServiceAccount
+    name: monitor-service-account
+    namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-deployment
+  labels:
+    app: monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor
+  template:
+    metadata:
+      labels:
+        app: monitor
+    spec:
+      serviceAccountName: monitor-service-account
+      containers:
+        - name: monitor
+          image: discoveryviakubernetesapisample/monitor:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
