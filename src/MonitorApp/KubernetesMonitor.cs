@@ -24,7 +24,7 @@ public class KubernetesMonitor(ILogger<KubernetesMonitor> logger) : BackgroundSe
     {
         var config = KubernetesClientConfiguration.InClusterConfig();
         var client = new Kubernetes(config);
-        
+
         // should use ListNamespacedServiceWithHttpMessagesAsync if wanted to get things from specific namespaces
         // but right now watching the whole cluster 
         var response = client.CoreV1.ListServiceForAllNamespacesWithHttpMessagesAsync(
@@ -33,9 +33,10 @@ public class KubernetesMonitor(ILogger<KubernetesMonitor> logger) : BackgroundSe
 
         await foreach (var (type, service) in response.WatchAsync<V1Service, V1ServiceList>(cancellationToken: ct))
         {
-            logger.LogInformation("""
-                                  {Type}: service "{Service}" (namespace "{Namespace}"), with annotation "{Annotation}"
-                                  """,
+            logger.LogInformation(
+                """
+                {Type}: service "{Service}" (namespace "{Namespace}"), with annotation "{Annotation}"
+                """,
                 type,
                 service.Metadata.Name,
                 service.Metadata.Namespace(),
@@ -44,11 +45,8 @@ public class KubernetesMonitor(ILogger<KubernetesMonitor> logger) : BackgroundSe
 
         static string GetAnnotation(V1Service service)
         {
-            if (service.Metadata?.Annotations is null)
-            {
-                return "N/A";
-            }
-
+            if (service.Metadata?.Annotations is null) return "N/A";
+            
             service.Metadata.Annotations.TryGetValue("some-sample-annotation", out var maybeAnnotation);
             return !string.IsNullOrWhiteSpace(maybeAnnotation) ? maybeAnnotation : "N/A";
         }
